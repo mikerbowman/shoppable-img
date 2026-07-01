@@ -23,13 +23,16 @@
       <div id="stage" class="stage">
         <img id="stageImg" alt="" />
       </div>
-      <p class="hint">Click anywhere on the image to drop a node (max 6). Click an existing node to edit it. Drag a node to reposition.</p>
+      <p class="hint">Click anywhere on the image to drop a node (max 6), or use "+ Add node" in the side panel. Drag a node to reposition it. Click a node (on the image or in the list) to edit it.</p>
     </div>
     <div id="emptyState" class="empty-state">No image loaded yet.</div>
   </section>
 
   <aside class="side-panel">
     <div class="node-counter">Nodes placed: <span id="nodeCount">0</span> / 6</div>
+
+    <div id="nodeList" class="node-list"></div>
+    <button id="addNodeBtn" type="button" class="secondary add-node-btn" disabled>+ Add node</button>
 
     <div id="editor" class="node-editor" hidden>
       <h2>Node <span id="editorIndex"></span></h2>

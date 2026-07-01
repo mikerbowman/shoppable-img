@@ -22,14 +22,15 @@
       ".si-widget img{display:block;width:100%;height:auto;border-radius:4px;}",
       ".si-node{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;",
       "  display:block;text-decoration:none;cursor:pointer;z-index:2;}",
-      ".si-node-dot{position:absolute;top:50%;left:50%;width:16px;height:16px;",
-      "  transform:translate(-50%,-50%);border-radius:50%;border:2px solid #fff;",
-      "  box-shadow:0 1px 4px rgba(0,0,0,.4);}",
-      ".si-node-ping{position:absolute;top:50%;left:50%;width:16px;height:16px;",
-      "  transform:translate(-50%,-50%);border-radius:50%;opacity:.65;",
+      ".si-node-dot{position:absolute;top:50%;left:50%;width:14px;height:14px;",
+      "  transform:translate(-50%,-50%);border-radius:50%;background:transparent;",
+      "  border:2px solid;box-shadow:0 1px 3px rgba(0,0,0,.35);}",
+      ".si-node-ping{position:absolute;top:50%;left:50%;width:14px;height:14px;",
+      "  transform:translate(-50%,-50%);border-radius:50%;background:transparent;",
+      "  border:2px solid;opacity:.7;",
       "  animation:si-pulse 1.8s ease-out infinite;}",
-      "@keyframes si-pulse{0%{transform:translate(-50%,-50%) scale(1);opacity:.65;}",
-      "  100%{transform:translate(-50%,-50%) scale(2.6);opacity:0;}}",
+      "@keyframes si-pulse{0%{transform:translate(-50%,-50%) scale(1);opacity:.7;}",
+      "  100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;}}",
       ".si-tooltip{position:absolute;bottom:calc(100% + 10px);left:50%;",
       "  transform:translateX(-50%) translateY(4px);min-width:120px;max-width:220px;",
       "  background:#111;color:#fff;padding:8px 10px;border-radius:6px;font:13px/1.35 -apple-system,",
@@ -65,12 +66,12 @@
 
     var ping = document.createElement("span");
     ping.className = "si-node-ping";
-    ping.style.background = color;
+    ping.style.borderColor = color;
     ping.setAttribute("aria-hidden", "true");
 
     var dot = document.createElement("span");
     dot.className = "si-node-dot";
-    dot.style.background = color;
+    dot.style.borderColor = color;
     dot.setAttribute("aria-hidden", "true");
 
     var tooltip = document.createElement("span");

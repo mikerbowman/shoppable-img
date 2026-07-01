@@ -20,6 +20,8 @@
     stage: document.getElementById("stage"),
     stageImg: document.getElementById("stageImg"),
     nodeCount: document.getElementById("nodeCount"),
+    nodeList: document.getElementById("nodeList"),
+    addNodeBtn: document.getElementById("addNodeBtn"),
     editor: document.getElementById("editor"),
     editorIndex: document.getElementById("editorIndex"),
     nodeColor: document.getElementById("nodeColor"),
@@ -56,9 +58,9 @@
       state.selectedIndex = -1;
       els.canvasWrap.hidden = false;
       els.emptyState.hidden = true;
-      renderNodes();
+      els.editor.hidden = true;
+      renderAll();
       updateGenerateBtn();
-      hideEditor();
     };
     els.stageImg.onerror = function () {
       alert("Could not load that image URL. Check it's a direct link to an image and allows hotlinking.");
@@ -92,15 +94,47 @@
       color: "#ff3b30", url: "", name: "", price: ""
     };
     state.nodes.push(node);
-    renderNodes();
-    selectNode(state.nodes.length - 1);
+    var newIndex = state.nodes.length - 1;
+    renderAll();
+    selectNode(newIndex);
+    updateGenerateBtn();
+  }
+
+  els.addNodeBtn.addEventListener("click", function () {
+    if (!state.imageUrl || state.nodes.length >= MAX_NODES) return;
+    // Stagger default positions so stacked "+ Add node" clicks don't pile up exactly on top of each other.
+    var i = state.nodes.length;
+    var x = clamp(30 + (i * 12) % 40);
+    var y = clamp(30 + (i * 18) % 40);
+    addNode(x, y);
+  });
+
+  function deleteNodeAt(index) {
+    state.nodes.splice(index, 1);
+    if (state.selectedIndex === index) {
+      hideEditor();
+    } else if (state.selectedIndex > index) {
+      state.selectedIndex -= 1;
+    }
+    renderAll();
     updateGenerateBtn();
   }
 
   function clamp(n) { return Math.min(100, Math.max(0, n)); }
 
-  // ---------- rendering the editable nodes on the stage ----------
-  function renderNodes() {
+  // ---------- rendering ----------
+  // Full rebuild: only ever called when the SET of nodes changes (add/delete/load),
+  // never on selection or field edits — rebuilding mid-interaction (e.g. while a
+  // pointer has captured a node for dragging) detaches the live element and
+  // silently breaks the drag.
+  function renderAll() {
+    renderStageNodes();
+    renderNodeList();
+    els.nodeCount.textContent = String(state.nodes.length);
+    els.addNodeBtn.disabled = !state.imageUrl || state.nodes.length >= MAX_NODES;
+  }
+
+  function renderStageNodes() {
     Array.from(els.stage.querySelectorAll(".editor-node")).forEach(function (el) { el.remove(); });
 
     state.nodes.forEach(function (node, i) {
@@ -108,9 +142,18 @@
       el.className = "editor-node" + (i === state.selectedIndex ? " selected" : "");
       el.style.left = node.x + "%";
       el.style.top = node.y + "%";
-      el.style.background = node.color;
-      el.textContent = String(i + 1);
       el.dataset.index = String(i);
+
+      var ping = document.createElement("span");
+      ping.className = "si-node-ping";
+      ping.style.borderColor = node.color;
+
+      var dot = document.createElement("span");
+      dot.className = "si-node-dot";
+      dot.style.borderColor = node.color;
+
+      el.appendChild(ping);
+      el.appendChild(dot);
 
       el.addEventListener("pointerdown", function (e) {
         e.stopPropagation();
@@ -120,8 +163,54 @@
 
       els.stage.appendChild(el);
     });
+  }
 
-    els.nodeCount.textContent = String(state.nodes.length);
+  function renderNodeList() {
+    els.nodeList.innerHTML = "";
+
+    state.nodes.forEach(function (node, i) {
+      var chip = document.createElement("div");
+      chip.className = "node-chip" + (i === state.selectedIndex ? " selected" : "");
+      chip.dataset.index = String(i);
+
+      var swatch = document.createElement("span");
+      swatch.className = "chip-swatch";
+      swatch.style.background = node.color;
+
+      var label = document.createElement("span");
+      label.className = "chip-label";
+      label.textContent = "Node " + (i + 1) +
+        (node.name ? " — " + node.name : "") +
+        (node.price ? " (" + node.price + ")" : "");
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "chip-delete";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "Delete node " + (i + 1));
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        deleteNodeAt(i);
+      });
+
+      chip.appendChild(swatch);
+      chip.appendChild(label);
+      chip.appendChild(del);
+      chip.addEventListener("click", function () { selectNode(i); });
+
+      els.nodeList.appendChild(chip);
+    });
+  }
+
+  // Selection only toggles classes on the elements that already exist —
+  // it must never rebuild the DOM (see renderAll comment above).
+  function updateSelectionUI() {
+    els.stage.querySelectorAll(".editor-node").forEach(function (el) {
+      el.classList.toggle("selected", Number(el.dataset.index) === state.selectedIndex);
+    });
+    els.nodeList.querySelectorAll(".node-chip").forEach(function (el) {
+      el.classList.toggle("selected", Number(el.dataset.index) === state.selectedIndex);
+    });
   }
 
   function startDrag(index, el, downEvent) {
@@ -152,7 +241,7 @@
   // ---------- node editor panel ----------
   function selectNode(index) {
     state.selectedIndex = index;
-    renderNodes();
+    updateSelectionUI();
     var node = state.nodes[index];
     els.editor.hidden = false;
     els.editorIndex.textContent = String(index + 1);
@@ -166,6 +255,7 @@
   function hideEditor() {
     state.selectedIndex = -1;
     els.editor.hidden = true;
+    updateSelectionUI();
   }
 
   function currentNode() {
@@ -178,17 +268,22 @@
         var node = currentNode();
         if (!node) return;
         node[pair[1]] = els[pair[0]].value;
-        if (pair[1] === "color") renderNodes();
+        if (pair[1] === "color") {
+          var stageEl = els.stage.querySelector('.editor-node[data-index="' + state.selectedIndex + '"]');
+          if (stageEl) {
+            stageEl.querySelectorAll(".si-node-dot, .si-node-ping").forEach(function (ringEl) {
+              ringEl.style.borderColor = node.color;
+            });
+          }
+        }
+        renderNodeList(); // cheap sidebar-only refresh to keep swatches/labels in sync
         updateGenerateBtn();
       });
     });
 
   els.deleteNodeBtn.addEventListener("click", function () {
     if (state.selectedIndex < 0) return;
-    state.nodes.splice(state.selectedIndex, 1);
-    hideEditor();
-    renderNodes();
-    updateGenerateBtn();
+    deleteNodeAt(state.selectedIndex);
   });
 
   // ---------- auto-fetch product info ----------
