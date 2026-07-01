@@ -4,6 +4,9 @@
   var MAX_NODES = 6;
   var LS_RUNTIME_URL = "si_builder_runtime_url";
   var LS_PROXY_URL = "si_builder_proxy_url";
+  // Live, working default so anyone opening this tool for the first time gets a
+  // working embed immediately, without needing to know what to paste in Settings.
+  var DEFAULT_RUNTIME_URL = "https://cdn.jsdelivr.net/gh/mikerbowman/shoppable-img@main/runtime/shoppable-image.js";
 
   var state = {
     imageUrl: "",
@@ -40,7 +43,7 @@
   };
 
   // ---------- settings persistence ----------
-  els.runtimeUrlInput.value = localStorage.getItem(LS_RUNTIME_URL) || "";
+  els.runtimeUrlInput.value = localStorage.getItem(LS_RUNTIME_URL) || DEFAULT_RUNTIME_URL;
   els.proxyUrlInput.value = localStorage.getItem(LS_PROXY_URL) || "";
   els.runtimeUrlInput.addEventListener("input", function () {
     localStorage.setItem(LS_RUNTIME_URL, els.runtimeUrlInput.value.trim());
@@ -337,8 +340,7 @@
   }
 
   els.generateBtn.addEventListener("click", function () {
-    var runtimeUrl = els.runtimeUrlInput.value.trim() ||
-      "https://YOUR-CDN-OR-GITHUB-PAGES-URL/shoppable-image.js";
+    var runtimeUrl = els.runtimeUrlInput.value.trim() || DEFAULT_RUNTIME_URL;
 
     var config = {
       image: state.imageUrl,
