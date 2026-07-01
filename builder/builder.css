@@ -1,0 +1,221 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --border: #dcdfe4;
+  --text: #1c1f24;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --danger: #dc2626;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  padding: 20px 28px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.topbar h1 { margin: 0 0 4px; font-size: 20px; }
+.topbar p { margin: 0; color: var(--muted); font-size: 14px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  padding: 20px 28px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.canvas-panel, .side-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.image-load-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.image-load-row input {
+  flex: 1;
+}
+
+input[type="url"], input[type="text"] {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+label input { margin-top: 5px; }
+label input[type="color"] {
+  width: 56px;
+  height: 32px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  width: 100%;
+}
+button.primary:disabled {
+  background: #a8bde8;
+  border-color: #a8bde8;
+  cursor: not-allowed;
+}
+button.secondary {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+  width: 100%;
+  margin-bottom: 6px;
+}
+button.danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--danger);
+  width: 100%;
+}
+
+.empty-state {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.canvas-wrap {}
+
+.stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  cursor: crosshair;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  background: #f0f0f0;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.editor-node {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: grab;
+  user-select: none;
+}
+.editor-node.selected {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+.editor-node.dragging {
+  cursor: grabbing;
+}
+
+.node-counter {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.node-editor h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.status-text {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+  margin: -4px 0 12px;
+}
+.status-text.error { color: var(--danger); }
+.status-text.ok { color: #15803d; }
+
+.editor-actions { margin-top: 4px; }
+
+.settings {
+  margin: 16px 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.settings summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.output-wrap {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.output-wrap h2 { font-size: 15px; margin: 0 0 8px; }
+#outputCode {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  resize: vertical;
+}

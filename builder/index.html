@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shoppable Image Builder</title>
+<link rel="stylesheet" href="builder.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>Shoppable Image Builder</h1>
+  <p>Load an image, place up to 6 clickable product nodes, then copy the embed code into WordPress.</p>
+</header>
+
+<main class="layout">
+  <section class="canvas-panel">
+    <div class="image-load-row">
+      <input id="imageUrlInput" type="url" placeholder="Paste an image URL and press Enter…" />
+      <button id="loadImageBtn" type="button">Load image</button>
+    </div>
+
+    <div id="canvasWrap" class="canvas-wrap" hidden>
+      <div id="stage" class="stage">
+        <img id="stageImg" alt="" />
+      </div>
+      <p class="hint">Click anywhere on the image to drop a node (max 6). Click an existing node to edit it. Drag a node to reposition.</p>
+    </div>
+    <div id="emptyState" class="empty-state">No image loaded yet.</div>
+  </section>
+
+  <aside class="side-panel">
+    <div class="node-counter">Nodes placed: <span id="nodeCount">0</span> / 6</div>
+
+    <div id="editor" class="node-editor" hidden>
+      <h2>Node <span id="editorIndex"></span></h2>
+
+      <label>Dot color
+        <input id="nodeColor" type="color" value="#ff3b30" />
+      </label>
+
+      <label>Product page URL
+        <input id="nodeUrl" type="url" placeholder="https://yourstore.com/products/…" />
+      </label>
+
+      <button id="autoFetchBtn" type="button" class="secondary">Auto-fetch name &amp; price</button>
+      <p id="autoFetchStatus" class="status-text"></p>
+
+      <label>Product name
+        <input id="nodeName" type="text" placeholder="Product name" />
+      </label>
+
+      <label>Price
+        <input id="nodePrice" type="text" placeholder="$29.99" />
+      </label>
+
+      <div class="editor-actions">
+        <button id="deleteNodeBtn" type="button" class="danger">Delete node</button>
+      </div>
+    </div>
+
+    <details class="settings">
+      <summary>Settings</summary>
+      <label>Runtime script URL (for embed output)
+        <input id="runtimeUrlInput" type="url" placeholder="https://cdn.jsdelivr.net/gh/USER/REPO@main/runtime/shoppable-image.js" />
+      </label>
+      <label>Auto-fetch proxy URL (optional)
+        <input id="proxyUrlInput" type="url" placeholder="https://your-worker.workers.dev" />
+      </label>
+    </details>
+
+    <button id="generateBtn" type="button" class="primary" disabled>Generate embed code</button>
+
+    <div id="outputWrap" class="output-wrap" hidden>
+      <h2>Embed code</h2>
+      <textarea id="outputCode" readonly rows="10"></textarea>
+      <button id="copyBtn" type="button" class="secondary">Copy to clipboard</button>
+    </div>
+  </aside>
+</main>
+
+<script src="../runtime/shoppable-image.js"></script>
+<script src="builder.js"></script>
+</body>
+</html>
