@@ -51,6 +51,19 @@ body {
 .image-load-row input {
   flex: 1;
 }
+.image-load-divider {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin: -6px 0 10px;
+}
+input[type="file"] {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+}
 
 input[type="url"], input[type="text"] {
   padding: 9px 10px;

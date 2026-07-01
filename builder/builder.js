@@ -34,6 +34,8 @@
     autoFetchBtn: document.getElementById("autoFetchBtn"),
     autoFetchStatus: document.getElementById("autoFetchStatus"),
     deleteNodeBtn: document.getElementById("deleteNodeBtn"),
+    imageFileInput: document.getElementById("imageFileInput"),
+    imageUploadStatus: document.getElementById("imageUploadStatus"),
     runtimeUrlInput: document.getElementById("runtimeUrlInput"),
     proxyUrlInput: document.getElementById("proxyUrlInput"),
     generateBtn: document.getElementById("generateBtn"),
@@ -53,10 +55,11 @@
   });
 
   // ---------- image loading ----------
-  function loadImage(url) {
-    if (!url) return;
+  // Shared by both "paste a URL" and "upload a file" — either way we end up
+  // with a src (a normal URL, or a data: URI) to drop into the stage image.
+  function applyImageSrc(src, onError) {
     els.stageImg.onload = function () {
-      state.imageUrl = url;
+      state.imageUrl = src;
       state.nodes = [];
       state.selectedIndex = -1;
       els.canvasWrap.hidden = false;
@@ -65,10 +68,17 @@
       renderAll();
       updateGenerateBtn();
     };
-    els.stageImg.onerror = function () {
+    els.stageImg.onerror = onError || function () {
       alert("Could not load that image URL. Check it's a direct link to an image and allows hotlinking.");
     };
-    els.stageImg.src = url;
+    els.stageImg.src = src;
+  }
+
+  function loadImage(url) {
+    if (!url) return;
+    els.imageFileInput.value = "";
+    setUploadStatus("");
+    applyImageSrc(url);
   }
 
   els.loadImageBtn.addEventListener("click", function () {
@@ -76,6 +86,79 @@
   });
   els.imageUrlInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") loadImage(els.imageUrlInput.value.trim());
+  });
+
+  // ---------- image upload ----------
+  // Embeds are self-contained (no backend), so an uploaded file becomes a
+  // compressed data: URI baked into the embed JSON — same as a pasted URL
+  // from here on, just inline bytes instead of a link. Resized/compressed
+  // client-side so a big photo doesn't bloat the embed HTML too much.
+  var UPLOAD_MAX_DIMENSION = 1600;
+  var UPLOAD_TARGET_BYTES = 900 * 1024;
+  var UPLOAD_QUALITY_STEPS = [0.85, 0.6, 0.4];
+
+  function approxDecodedBytes(dataUrl) {
+    var base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+    return Math.round(base64.length * 0.75);
+  }
+
+  function fileToCompressedDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      var objectUrl = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(objectUrl);
+
+        var scale = Math.min(1, UPLOAD_MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.round(img.naturalWidth * scale);
+        var h = Math.round(img.naturalHeight * scale);
+
+        var canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff"; // flatten transparency (e.g. PNGs) onto white before JPEG encoding
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        var dataUrl = canvas.toDataURL("image/jpeg", UPLOAD_QUALITY_STEPS[0]);
+        for (var i = 1; i < UPLOAD_QUALITY_STEPS.length && approxDecodedBytes(dataUrl) > UPLOAD_TARGET_BYTES; i++) {
+          dataUrl = canvas.toDataURL("image/jpeg", UPLOAD_QUALITY_STEPS[i]);
+        }
+        resolve(dataUrl);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not read that image file."));
+      };
+      img.src = objectUrl;
+    });
+  }
+
+  function setUploadStatus(msg, kind) {
+    els.imageUploadStatus.textContent = msg || "";
+    els.imageUploadStatus.className = "status-text" + (kind ? " " + kind : "");
+  }
+
+  els.imageFileInput.addEventListener("change", function () {
+    var file = els.imageFileInput.files && els.imageFileInput.files[0];
+    if (!file) return;
+    if (file.type.indexOf("image/") !== 0) {
+      setUploadStatus("Please choose an image file.", "error");
+      return;
+    }
+
+    setUploadStatus("Processing image…");
+    fileToCompressedDataUrl(file).then(function (dataUrl) {
+      els.imageUrlInput.value = "";
+      applyImageSrc(dataUrl, function () {
+        setUploadStatus("Could not process that image file.", "error");
+      });
+      var kb = Math.round(approxDecodedBytes(dataUrl) / 1024);
+      setUploadStatus("Uploaded (≈" + kb + " KB after compression).", "ok");
+    }).catch(function (err) {
+      setUploadStatus(err.message, "error");
+    });
   });
 
   // ---------- node placement ----------
