@@ -4,9 +4,11 @@
   var MAX_NODES = 6;
   var LS_RUNTIME_URL = "si_builder_runtime_url";
   var LS_PROXY_URL = "si_builder_proxy_url";
-  // Live, working default so anyone opening this tool for the first time gets a
-  // working embed immediately, without needing to know what to paste in Settings.
+  // Live, working defaults so anyone opening this tool for the first time gets a
+  // working embed (and working auto-fetch) immediately, without needing to know
+  // what to paste into Settings.
   var DEFAULT_RUNTIME_URL = "https://cdn.jsdelivr.net/gh/mikerbowman/shoppable-img@main/runtime/shoppable-image.js";
+  var DEFAULT_PROXY_URL = "https://shoppable-image-proxy.mikerbowman.workers.dev";
 
   var state = {
     imageUrl: "",
@@ -46,7 +48,7 @@
 
   // ---------- settings persistence ----------
   els.runtimeUrlInput.value = localStorage.getItem(LS_RUNTIME_URL) || DEFAULT_RUNTIME_URL;
-  els.proxyUrlInput.value = localStorage.getItem(LS_PROXY_URL) || "";
+  els.proxyUrlInput.value = localStorage.getItem(LS_PROXY_URL) || DEFAULT_PROXY_URL;
   els.runtimeUrlInput.addEventListener("input", function () {
     localStorage.setItem(LS_RUNTIME_URL, els.runtimeUrlInput.value.trim());
   });
