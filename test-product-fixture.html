@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Test Product Page</title>
+<meta property="og:title" content="OG Fallback Title" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": "Test Running Shoe",
+  "image": "https://example.com/shoe.jpg",
+  "offers": {
+    "@type": "Offer",
+    "price": "89.99",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+</head>
+<body>
+<h1>Test product fixture for the shoppable-image auto-fetch proxy</h1>
+<p>This page exists purely to verify the Cloudflare Worker's JSON-LD Product parsing against a stable, controlled URL.</p>
+</body>
+</html>
