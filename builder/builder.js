@@ -91,20 +91,21 @@
   });
 
   // ---------- image upload ----------
-  // Embeds are self-contained (no backend), so an uploaded file becomes a
-  // compressed data: URI baked into the embed JSON — same as a pasted URL
-  // from here on, just inline bytes instead of a link. Resized/compressed
-  // client-side so a big photo doesn't bloat the embed HTML too much.
+  // Uploaded files are resized/compressed client-side, then POSTed to the proxy's
+  // /upload endpoint (backed by R2) so the embed just links to a short hosted URL —
+  // same as pasting an image URL. This matters a lot for platforms like Shopify,
+  // which truncate blog post HTML past ~60K characters: inlining a photo as a
+  // base64 data: URI can blow past that on its own. Inline data: URI is kept only
+  // as a last-resort fallback if no hosting proxy is available.
   var UPLOAD_MAX_DIMENSION = 1600;
   var UPLOAD_TARGET_BYTES = 900 * 1024;
   var UPLOAD_QUALITY_STEPS = [0.85, 0.6, 0.4];
 
-  function approxDecodedBytes(dataUrl) {
-    var base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-    return Math.round(base64.length * 0.75);
+  function canvasToBlob(canvas, quality) {
+    return new Promise(function (resolve) { canvas.toBlob(resolve, "image/jpeg", quality); });
   }
 
-  function fileToCompressedDataUrl(file) {
+  function resizeFileToBlob(file) {
     return new Promise(function (resolve, reject) {
       var objectUrl = URL.createObjectURL(file);
       var img = new Image();
@@ -123,17 +124,43 @@
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
 
-        var dataUrl = canvas.toDataURL("image/jpeg", UPLOAD_QUALITY_STEPS[0]);
-        for (var i = 1; i < UPLOAD_QUALITY_STEPS.length && approxDecodedBytes(dataUrl) > UPLOAD_TARGET_BYTES; i++) {
-          dataUrl = canvas.toDataURL("image/jpeg", UPLOAD_QUALITY_STEPS[i]);
-        }
-        resolve(dataUrl);
+        (async function () {
+          var blob = await canvasToBlob(canvas, UPLOAD_QUALITY_STEPS[0]);
+          for (var i = 1; i < UPLOAD_QUALITY_STEPS.length && blob.size > UPLOAD_TARGET_BYTES; i++) {
+            blob = await canvasToBlob(canvas, UPLOAD_QUALITY_STEPS[i]);
+          }
+          resolve(blob);
+        })();
       };
       img.onerror = function () {
         URL.revokeObjectURL(objectUrl);
         reject(new Error("Could not read that image file."));
       };
       img.src = objectUrl;
+    });
+  }
+
+  function uploadBlobToHost(blob, proxyUrl) {
+    return fetch(proxyUrl.replace(/\/$/, "") + "/upload", {
+      method: "POST",
+      headers: { "Content-Type": blob.type },
+      body: blob
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          throw new Error(data.error || ("Upload failed: " + res.status));
+        });
+      }
+      return res.json();
+    }).then(function (data) { return data.url; });
+  }
+
+  function blobToDataUrl(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
     });
   }
 
@@ -151,13 +178,37 @@
     }
 
     setUploadStatus("Processing image…");
-    fileToCompressedDataUrl(file).then(function (dataUrl) {
-      els.imageUrlInput.value = "";
-      applyImageSrc(dataUrl, function () {
-        setUploadStatus("Could not process that image file.", "error");
+    resizeFileToBlob(file).then(function (blob) {
+      var kb = Math.round(blob.size / 1024);
+      var proxyUrl = els.proxyUrlInput.value.trim();
+
+      function useInlineFallback(reason) {
+        return blobToDataUrl(blob).then(function (dataUrl) {
+          els.imageUrlInput.value = "";
+          applyImageSrc(dataUrl);
+          setUploadStatus(
+            reason + " Using an inline copy instead (≈" + kb + " KB) — this makes the embed code " +
+            "much larger and may get truncated on platforms like Shopify. Set an Auto-fetch proxy URL " +
+            "in Settings below to get a small, hosted link instead.",
+            "error"
+          );
+        });
+      }
+
+      if (!proxyUrl) {
+        return useInlineFallback("No hosting proxy configured.");
+      }
+
+      setUploadStatus("Uploading (≈" + kb + " KB)…");
+      return uploadBlobToHost(blob, proxyUrl).then(function (hostedUrl) {
+        els.imageUrlInput.value = "";
+        applyImageSrc(hostedUrl, function () {
+          setUploadStatus("Could not load the uploaded image.", "error");
+        });
+        setUploadStatus("Uploaded (≈" + kb + " KB) — embed stays small since this is a hosted link.", "ok");
+      }).catch(function (err) {
+        return useInlineFallback("Hosting upload failed (" + err.message + ").");
       });
-      var kb = Math.round(approxDecodedBytes(dataUrl) / 1024);
-      setUploadStatus("Uploaded (≈" + kb + " KB after compression).", "ok");
     }).catch(function (err) {
       setUploadStatus(err.message, "error");
     });
@@ -448,6 +499,19 @@
 
     els.outputCode.value = html;
     els.outputWrap.hidden = false;
+
+    var SHOPIFY_SAFE_LIMIT = 55000; // Shopify truncates blog post HTML around ~60K characters
+    var sizeEl = document.getElementById("embedSizeStatus");
+    if (html.length > SHOPIFY_SAFE_LIMIT) {
+      sizeEl.textContent = "Warning: this embed is " + html.length.toLocaleString() +
+        " characters — platforms like Shopify may truncate blog content past ~60,000 characters. " +
+        "This usually means the image is inlined instead of hosted; check that Settings has a working " +
+        "Auto-fetch proxy URL and re-upload the image.";
+      sizeEl.className = "status-text error";
+    } else {
+      sizeEl.textContent = html.length.toLocaleString() + " characters.";
+      sizeEl.className = "status-text";
+    }
   });
 
   els.copyBtn.addEventListener("click", function () {

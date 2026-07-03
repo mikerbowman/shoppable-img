@@ -116,13 +116,66 @@ async function extractMetadata(pageUrl) {
   };
 }
 
+// ---------- image hosting (so embeds link to a URL instead of inlining base64 bytes) ----------
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024; // 3MB — the builder already compresses well under this
+const EXT_BY_CONTENT_TYPE = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif"
+};
+
+async function handleUpload(request, env, origin) {
+  const contentType = request.headers.get("Content-Type") || "";
+  const ext = EXT_BY_CONTENT_TYPE[contentType];
+  if (!ext) {
+    return jsonResponse({ error: "Unsupported or missing Content-Type. Expected an image/* type." }, 400);
+  }
+
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength === 0) {
+    return jsonResponse({ error: "Empty upload" }, 400);
+  }
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+    return jsonResponse({ error: `Image too large (max ${MAX_UPLOAD_BYTES / 1024 / 1024}MB)` }, 413);
+  }
+
+  const key = `${crypto.randomUUID()}.${ext}`;
+  await env.UPLOADS.put(key, bytes, { httpMetadata: { contentType } });
+
+  return jsonResponse({ url: `${origin}/images/${key}` });
+}
+
+async function handleServeImage(key, env) {
+  const object = await env.UPLOADS.get(key);
+  if (!object) {
+    return jsonResponse({ error: "Not found" }, 404);
+  }
+  return new Response(object.body, {
+    headers: {
+      "Content-Type": object.httpMetadata?.contentType || "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      ...corsHeaders()
+    }
+  });
+}
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders() });
     }
 
     const url = new URL(request.url);
+
+    if (url.pathname === "/upload" && request.method === "POST") {
+      return handleUpload(request, env, url.origin);
+    }
+
+    if (url.pathname.startsWith("/images/") && request.method === "GET") {
+      return handleServeImage(url.pathname.slice("/images/".length), env);
+    }
+
     const target = url.searchParams.get("url");
 
     if (!target) {
